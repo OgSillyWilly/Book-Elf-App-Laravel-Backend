@@ -8,10 +8,47 @@ use Illuminate\Http\Request;
 
 class BookApiController extends Controller
 {
-    // Display a listing of the resource.
-    public function index()
+    private function transformCoverUrl($book)
     {
-        $books = Book::all();
+        if ($book->cover_url && filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
+            $book->cover_url = url('/api/image-proxy?url=' . urlencode($book->cover_url));
+        }
+        return $book;
+    }
+
+    // Display a listing of the resource.
+    public function index(Request $request)
+    {
+        $query = Book::query();
+
+        // Search
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('author', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by type
+        if ($request->has('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
+        // Filter by read status
+        if ($request->has('is_read')) {
+            $query->where('is_read', $request->input('is_read'));
+        }
+
+        // Sort
+        $sortBy = $request->input('sort_by', 'title');
+        $query->orderBy($sortBy);
+
+        $books = $query->get()->map(function ($book) {
+            return $this->transformCoverUrl($book);
+        });
+        
         return response()->json($books);
     }
 
@@ -35,14 +72,14 @@ class BookApiController extends Controller
         ]);
 
         $book = Book::create($validated);
-        return response()->json($book, 201);
+        return response()->json($this->transformCoverUrl($book), 201);
     }
 
     // Display the specified resource.
     public function show(string $id)
     {
         $book = Book::findOrFail($id);
-        return response()->json($book);
+        return response()->json($this->transformCoverUrl($book));
     }
 
     //Update the specified resource in storage.
@@ -58,6 +95,8 @@ class BookApiController extends Controller
             'publisher' => 'nullable|max:255',
             'publication_date' => 'nullable|date',
             'cover_url' => 'nullable|url|max:2048',
+            'has_slipcase' => 'nullable|boolean',
+            'has_dustjacket' => 'nullable|boolean',
             'cabinet' => 'nullable|max:50',
             'shelf' => 'required|max:10',
             'position' => 'required|integer',
@@ -67,7 +106,7 @@ class BookApiController extends Controller
         ]);
 
         $book->update($validated);
-        return response()->json($book);
+        return response()->json($this->transformCoverUrl($book));
     }
 
     //Remove the specified resource from storage.
