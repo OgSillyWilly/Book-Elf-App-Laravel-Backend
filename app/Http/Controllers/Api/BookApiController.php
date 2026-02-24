@@ -19,34 +19,40 @@ class BookApiController extends Controller
     // Display a listing of the resource.
     public function index(Request $request)
     {
-        $query = Book::query();
+        // Cache key based on query parameters
+        $cacheKey = 'books_' . md5(json_encode($request->all()));
+        
+        // Cache for 5 minutes
+        $books = cache()->remember($cacheKey, 300, function () use ($request) {
+            $query = Book::query();
 
-        // Search
-        if ($request->has('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('isbn', 'like', "%{$search}%");
+            // Search
+            if ($request->has('search')) {
+                $search = $request->input('search');
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('author', 'like', "%{$search}%")
+                      ->orWhere('isbn', 'like', "%{$search}%");
+                });
+            }
+
+            // Filter by type
+            if ($request->has('type')) {
+                $query->where('type', $request->input('type'));
+            }
+
+            // Filter by read status
+            if ($request->has('is_read')) {
+                $query->where('is_read', $request->input('is_read'));
+            }
+
+            // Sort
+            $sortBy = $request->input('sort_by', 'title');
+            $query->orderBy($sortBy);
+
+            return $query->get()->map(function ($book) {
+                return $this->transformCoverUrl($book);
             });
-        }
-
-        // Filter by type
-        if ($request->has('type')) {
-            $query->where('type', $request->input('type'));
-        }
-
-        // Filter by read status
-        if ($request->has('is_read')) {
-            $query->where('is_read', $request->input('is_read'));
-        }
-
-        // Sort
-        $sortBy = $request->input('sort_by', 'title');
-        $query->orderBy($sortBy);
-
-        $books = $query->get()->map(function ($book) {
-            return $this->transformCoverUrl($book);
         });
         
         return response()->json($books);
@@ -64,14 +70,18 @@ class BookApiController extends Controller
             'publication_date' => 'nullable|date',
             'cover_url' => 'nullable|url|max:2048',
             'cabinet' => 'nullable|max:50',
-            'shelf' => 'required|max:10',
-            'position' => 'required|integer',
+            'shelf' => 'nullable|max:10',
+            'position' => 'nullable|integer',
             'is_read' => 'nullable|boolean',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $book = Book::create($validated);
+        
+        // Clear cache when creating a book
+        cache()->flush();
+        
         return response()->json($this->transformCoverUrl($book), 201);
     }
 
@@ -98,14 +108,18 @@ class BookApiController extends Controller
             'has_slipcase' => 'nullable|boolean',
             'has_dustjacket' => 'nullable|boolean',
             'cabinet' => 'nullable|max:50',
-            'shelf' => 'required|max:10',
-            'position' => 'required|integer',
+            'shelf' => 'nullable|max:10',
+            'position' => 'nullable|integer',
             'is_read' => 'nullable|boolean',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $book->update($validated);
+        
+        // Clear cache when updating a book
+        cache()->flush();
+        
         return response()->json($this->transformCoverUrl($book));
     }
 
@@ -114,6 +128,10 @@ class BookApiController extends Controller
     {
         $book = Book::findOrFail($id);
         $book->delete();
+        
+        // Clear cache when deleting a book
+        cache()->flush();
+        
         return response()->json(null, 204);
     }
 }
