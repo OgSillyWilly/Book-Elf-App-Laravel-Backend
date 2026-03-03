@@ -25,5 +25,6 @@ class Book extends Model
         'is_read',
         'start_date',
         'end_date',
+        'year_read',
     ];
 }

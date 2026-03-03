@@ -46,6 +46,11 @@ class BookApiController extends Controller
                 $query->where('is_read', $request->input('is_read'));
             }
 
+            // Filter by year read
+            if ($request->has('year_read')) {
+                $query->where('year_read', $request->input('year_read'));
+            }
+
             // Sort
             $sortBy = $request->input('sort_by', 'title');
             $query->orderBy($sortBy);
@@ -75,6 +80,7 @@ class BookApiController extends Controller
             'is_read' => 'nullable|boolean',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'year_read' => 'nullable|integer|min:1900|max:2100',
         ]);
 
         $book = Book::create($validated);
@@ -113,6 +119,7 @@ class BookApiController extends Controller
             'is_read' => 'nullable|boolean',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'year_read' => 'nullable|integer|min:1900|max:2100',
         ]);
 
         $book->update($validated);
@@ -133,5 +140,18 @@ class BookApiController extends Controller
         cache()->flush();
         
         return response()->json(null, 204);
+    }
+
+    // Get reading history grouped by year
+    public function readingHistory()
+    {
+        $history = Book::whereNotNull('year_read')
+            ->where('is_read', true)
+            ->selectRaw('year_read, COUNT(*) as count')
+            ->groupBy('year_read')
+            ->orderBy('year_read', 'desc')
+            ->get();
+        
+        return response()->json($history);
     }
 }
