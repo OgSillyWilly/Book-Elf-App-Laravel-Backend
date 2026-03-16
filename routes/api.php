@@ -1,17 +1,21 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\BookApiController;
-use App\Http\Controllers\Api\BookImportController;
-use App\Http\Controllers\ImageProxyController;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Split into modular files for better organization and performance.
+| Each feature has its own route file in the routes/api/ directory.
+|
+*/
 
 Route::middleware('api')->group(function () {
-    // Specific routes must come BEFORE apiResource
-    Route::post('books/import', [BookImportController::class, 'import']);
-    Route::get('books/template/download', [BookImportController::class, 'template']);
-    Route::get('books/reading-history', [BookApiController::class, 'readingHistory']);
+    // Book management routes
+    require __DIR__ . '/api/books.php';
     
-    Route::apiResource('books', BookApiController::class);
-    Route::get('image-proxy', [ImageProxyController::class, 'proxy']);
+    // Media & utility routes
+    require __DIR__ . '/api/media.php';
 });
