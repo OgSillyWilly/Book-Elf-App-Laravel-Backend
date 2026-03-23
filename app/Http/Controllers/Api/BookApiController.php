@@ -81,6 +81,7 @@ class BookApiController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'year_read' => 'nullable|integer|min:1900|max:2100',
+            'rating' => 'nullable|numeric|min:0|max:10',
         ]);
 
         $book = Book::create($validated);
@@ -120,6 +121,7 @@ class BookApiController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'year_read' => 'nullable|integer|min:1900|max:2100',
+            'rating' => 'nullable|numeric|min:0|max:10',
         ]);
 
         $book->update($validated);
