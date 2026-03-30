@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Imports\BooksImport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BookImportController extends Controller
@@ -28,8 +29,12 @@ class BookImportController extends Controller
         try {
             Excel::import(new BooksImport, $request->file('file'));
 
-            // Clear cache after import
-            cache()->flush();
+            // Clear books-related cache after import
+            $cacheKeys = Cache::get('books_cache_keys', []);
+            foreach ($cacheKeys as $key) {
+                Cache::forget($key);
+            }
+            Cache::forget('books_cache_keys');
 
             return response()->json([
                 'message' => 'Boeken succesvol geïmporteerd!',
@@ -71,10 +76,12 @@ class BookImportController extends Controller
             'dustjacket',
             'startdatum',
             'einddatum',
+            'jaar_gelezen',
+            'beoordeling',
         ];
 
         $csv = implode(',', $headers) . "\n";
-        $csv .= '"Voorbeeld Boek","Voorbeeld Auteur","9781234567890","Roman","Uitgeverij","2024-01-15","1","2","1","1","0","1","2024-01-01","2024-01-30"';
+        $csv .= '"Voorbeeld Boek","Voorbeeld Auteur","9781234567890","Roman","Uitgeverij","2024-01-15","1","2","1","1","0","1","2024-01-01","2024-01-30","2024","8.5"';
 
         return response($csv, 200)
             ->header('Content-Type', 'text/csv')

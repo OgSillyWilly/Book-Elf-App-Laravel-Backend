@@ -45,6 +45,8 @@ class BooksImport implements ToModel, WithHeadingRow, WithValidation
             'has_dustjacket'   => $row['dustjacket'] ?? $row['has_dustjacket'] ?? false,
             'start_date'       => $row['startdatum'] ?? $row['start_date'] ?? null,
             'end_date'         => $row['einddatum'] ?? $row['end_date'] ?? null,
+            'year_read'        => $row['jaar_gelezen'] ?? $row['year_read'] ?? null,
+            'rating'           => $row['beoordeling'] ?? $row['rating'] ?? null,
         ]);
     }
 
