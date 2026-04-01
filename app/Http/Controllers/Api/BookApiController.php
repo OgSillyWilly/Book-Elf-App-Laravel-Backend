@@ -38,8 +38,12 @@ class BookApiController extends Controller
         // Validate URL and protocol
         if (filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
             $parsedUrl = parse_url($book->cover_url);
-            // Only proxy HTTP/HTTPS URLs
-            if (isset($parsedUrl['scheme']) && in_array($parsedUrl['scheme'], ['http', 'https'])) {
+            
+            // Only proxy HTTP/HTTPS URLs that are NOT local storage
+            // Local storage URLs (starting with /storage/) should not be proxied
+            if (isset($parsedUrl['scheme']) && 
+                in_array($parsedUrl['scheme'], ['http', 'https']) &&
+                !str_contains($book->cover_url, '/storage/')) {
                 $book->cover_url = url('/api/image-proxy?url=' . urlencode($book->cover_url));
             }
         }
@@ -223,5 +227,81 @@ class BookApiController extends Controller
             ->get();
         
         return response()->json($history);
+    }
+
+    /**
+     * Upload a cover image for a book
+     */
+    public function uploadCover(Request $request, Book $book)
+    {
+        $request->validate([
+            'cover' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240', // Max 10MB
+        ]);
+
+        try {
+            // Delete old cover if it exists and is a local file
+            if ($book->cover_url && !filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
+                $oldPath = public_path($book->cover_url);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+
+            // Store the new cover
+            $file = $request->file('cover');
+            $filename = 'book_' . $book->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('covers', $filename, 'public');
+            
+            // Store relative URL in database (no host/IP) with cache-busting parameter
+            $relativePath = '/storage/' . $path . '?v=' . time();
+            $book->cover_url = $relativePath;
+            $book->save();
+            
+            // Clear cache
+            $this->clearBooksCache();
+            
+            // Return full URL for immediate use by client
+            return response()->json([
+                'message' => 'Cover uploaded successfully',
+                'cover_url' => url($relativePath)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload cover',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a book's cover image
+     */
+    public function deleteCover(Book $book)
+    {
+        try {
+            // Only delete if it's a local file (not an external URL)
+            if ($book->cover_url && !filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
+                $path = public_path($book->cover_url);
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+            
+            // Remove cover URL from database
+            $book->cover_url = null;
+            $book->save();
+            
+            // Clear cache
+            $this->clearBooksCache();
+            
+            return response()->json([
+                'message' => 'Cover deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete cover',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

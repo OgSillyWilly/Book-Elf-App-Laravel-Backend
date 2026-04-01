@@ -169,3 +169,120 @@ input, select {
 .modal-close:hover {
     background-color: #6D4C41;
 }
+
+/* Filter Controls Styling */
+.filter-controls {
+    margin-bottom: 20px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #A1887F;
+}
+
+.search-bar-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 250px;
+    padding: 10px;
+    border: 1px solid #A1887F;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.btn-filter-toggle {
+    padding: 10px 16px;
+    background-color: #A1887F;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-filter-toggle:hover {
+    background-color: #8D6E63;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background-color: #6D4C41;
+    color: white;
+    border-radius: 4px;
+}
+
+.btn-primary:hover {
+    background-color: #5D4037;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background-color: #8B4513;
+    color: white;
+    border-radius: 4px;
+}
+
+.btn-secondary:hover {
+    background-color: #6D4C41;
+}
+
+.extra-filters {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #D7CCC8;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #3E2723;
+}
+
+.filter-group select {
+    padding: 8px;
+    border: 1px solid #A1887F;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+}
+
+#filter-icon {
+    transition: transform 0.3s ease;
+}
+
+/* Responsive design voor mobiel */
+@media (max-width: 768px) {
+    .search-bar-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .search-input {
+        width: 100%;
+        min-width: 100%;
+    }
+    
+    .btn-filter-toggle,
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}

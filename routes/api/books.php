@@ -20,6 +20,10 @@ Route::prefix('books')->group(function () {
     Route::get('template/download', [BookImportController::class, 'template']);
     Route::get('reading-history', [BookApiController::class, 'readingHistory']);
     
+    // Cover upload/delete routes (before resource routes to avoid conflicts)
+    Route::post('/{book}/cover', [BookApiController::class, 'uploadCover']);
+    Route::delete('/{book}/cover', [BookApiController::class, 'deleteCover']);
+    
     // Standard CRUD operations
     Route::get('/', [BookApiController::class, 'index']);
     Route::post('/', [BookApiController::class, 'store']);

@@ -16,17 +16,53 @@
     @endif
 
     <div class="filter-controls">
-        <form method="GET" action="{{ route('books.index') }}" style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <input type="text" name="search" placeholder="Zoek op titel..." value="{{ request('search') }}" style="flex: 1; padding: 8px;">
-            <select name="read_status" style="padding: 8px;">
-                <option value="">Alle boeken</option>
-                <option value="read" {{ request('read_status') == 'read' ? 'selected' : '' }}>Gelezen</option>
-                <option value="unread" {{ request('read_status') == 'unread' ? 'selected' : '' }}>Ongelezen</option>
-            </select>
-            <button type="submit" class="btn btn-primary">Zoeken</button>
-            <a href="{{ route('books.index') }}" class="btn btn-secondary">Reset</a>
+        <form method="GET" action="{{ route('books.index') }}">
+            <!-- Altijd zichtbare zoekbalk -->
+            <div class="search-bar-container">
+                <input type="text" name="search" placeholder="Zoek op titel of auteur..." value="{{ request('search') }}" class="search-input">
+                <button type="button" class="btn-filter-toggle" onclick="toggleFilters()">
+                    <span id="filter-icon">▼</span> Filters
+                </button>
+                <button type="submit" class="btn btn-primary">Zoeken</button>
+                <a href="{{ route('books.index') }}" class="btn btn-secondary">Reset</a>
+            </div>
+
+            <!-- Uitklapbare extra filters -->
+            <div id="extra-filters" class="extra-filters" style="display: none;">
+                <div class="filter-group">
+                    <label for="read_status">Status:</label>
+                    <select name="read_status" id="read_status">
+                        <option value="">Alle boeken</option>
+                        <option value="read" {{ request('read_status') == 'read' ? 'selected' : '' }}>Gelezen</option>
+                        <option value="unread" {{ request('read_status') == 'unread' ? 'selected' : '' }}>Ongelezen</option>
+                    </select>
+                </div>
+            </div>
         </form>
     </div>
+
+    <script>
+        function toggleFilters() {
+            const extraFilters = document.getElementById('extra-filters');
+            const filterIcon = document.getElementById('filter-icon');
+            
+            if (extraFilters.style.display === 'none') {
+                extraFilters.style.display = 'block';
+                filterIcon.textContent = '▲';
+            } else {
+                extraFilters.style.display = 'none';
+                filterIcon.textContent = '▼';
+            }
+        }
+
+        // Open filters automatisch als er een filter actief is
+        document.addEventListener('DOMContentLoaded', function() {
+            const hasActiveFilters = {{ request('read_status') ? 'true' : 'false' }};
+            if (hasActiveFilters) {
+                toggleFilters();
+            }
+        });
+    </script>
 
     <a href="{{ route('books.create') }}" class="btn btn-success">Nieuw Boek Toevoegen</a>
 

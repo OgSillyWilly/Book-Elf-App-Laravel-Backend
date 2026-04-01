@@ -28,7 +28,12 @@ class StoreBookRequest extends FormRequest
             'type' => 'nullable|max:50',
             'publisher' => 'nullable|max:255',
             'publication_date' => 'nullable|date',
-            'cover_url' => 'nullable|url|max:2048',
+            'cover_url' => ['nullable', 'max:2048', function ($attribute, $value, $fail) {
+                // Accept either full URLs or relative paths starting with /
+                if ($value && !filter_var($value, FILTER_VALIDATE_URL) && !str_starts_with($value, '/')) {
+                    $fail('The ' . $attribute . ' must be a valid URL or relative path.');
+                }
+            }],
             'has_slipcase' => 'nullable|boolean',
             'has_dustjacket' => 'nullable|boolean',
             'cabinet' => 'nullable|max:50',
