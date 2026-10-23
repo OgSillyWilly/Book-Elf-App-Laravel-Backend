@@ -13,18 +13,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('api')->group(function () {
-    // Book management routes
-    require __DIR__ . '/api/books.php';
+    // Authentication routes
+    require __DIR__ . '/api/auth.php';
     
-    // Series management routes
-    require __DIR__ . '/api/series.php';
-    
-    // Reading challenge routes
-    require __DIR__ . '/api/reading-challenges.php';
-    
-    // Statistics routes
-    require __DIR__ . '/api/statistics.php';
-    
-    // Media & utility routes
-    require __DIR__ . '/api/media.php';
+    // Everything below is per-user data and requires a bearer token
+    Route::middleware('auth:sanctum')->group(function () {
+        require __DIR__ . '/api/books.php';
+        require __DIR__ . '/api/series.php';
+        require __DIR__ . '/api/reading-challenges.php';
+        require __DIR__ . '/api/statistics.php';
+        require __DIR__ . '/api/media.php';
+    });
 });

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         // Use Eloquent for database-agnostic code
-        $books = Book::where('is_read', true)
+        $books = Book::withoutGlobalScopes()->where('is_read', true)
             ->whereNull('year_read')
             ->get();
         

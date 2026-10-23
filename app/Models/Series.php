@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Series extends Model
 {
-    use HasFactory;
+    use BelongsToUser, HasFactory;
 
     protected $fillable = [
         'name',

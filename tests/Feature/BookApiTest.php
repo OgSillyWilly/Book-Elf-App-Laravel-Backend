@@ -1,11 +1,20 @@
 <?php
 
 use App\Models\Book;
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\Sanctum;
 use function Pest\Laravel\{getJson, postJson, putJson, deleteJson};
 
 beforeEach(function () {
+    // Clear cache before each test
+    Cache::flush();
+
+    $this->user = User::factory()->create();
+    Sanctum::actingAs($this->user);
+
     // Create test data
-    Book::factory()->create([
+    Book::factory()->for($this->user)->create([
         'title' => 'Test Book',
         'author' => 'Test Author',
         'type' => 'Roman',
@@ -18,8 +27,8 @@ test('can list all books', function () {
     $response = getJson('/api/books');
     
     $response->assertStatus(200);
-    $response->assertJsonCount(1);
-    $response->assertJsonFragment(['title' => 'Test Book']);
+    $response->assertJsonCount(1, 'data');
+    $response->assertJsonPath('data.0.title', 'Test Book');
 });
 
 test('can search books by title', function () {
@@ -30,7 +39,7 @@ test('can search books by title', function () {
 });
 
 test('can filter books by type', function () {
-    Book::factory()->create([
+    Book::factory()->for($this->user)->create([
         'title' => 'Comic Book',
         'author' => 'Comic Author',
         'type' => 'Strip',
@@ -93,9 +102,16 @@ test('validates required fields when creating book', function () {
     $response->assertJsonValidationErrors(['title', 'author']);
 });
 
-test('image proxy returns image', function () {
-    $response = getJson('/api/image-proxy?url=' . urlencode('https://books.google.com/books/content?id=test'));
+test('image proxy validates URL parameter', function () {
+    $response = getJson('/api/image-proxy');
     
-    // Should return an image or redirect
-    expect($response->status())->toBeIn([200, 302, 404]);
+    $response->assertStatus(400);
+    $response->assertJson(['error' => 'URL parameter is required']);
+});
+
+test('image proxy rejects invalid domains', function () {
+    $response = getJson('/api/image-proxy?url=' . urlencode('https://evil.com/image.jpg'));
+    
+    $response->assertStatus(403);
+    $response->assertJson(['error' => 'Domain not allowed']);
 });

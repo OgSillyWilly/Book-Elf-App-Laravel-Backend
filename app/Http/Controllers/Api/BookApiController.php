@@ -8,7 +8,9 @@ use App\Services\BookCoverService;
 use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class BookApiController extends Controller
 {
@@ -56,12 +58,29 @@ class BookApiController extends Controller
      */
     private function clearBooksCache(): void
     {
-        // Clear only books-related cache keys
-        $keys = Cache::get('books_cache_keys', []);
-        foreach ($keys as $key) {
+        // Clear only the current user's books-related cache keys
+        $trackerKey = 'books_cache_keys:' . Auth::id();
+        foreach (Cache::get($trackerKey, []) as $key) {
             Cache::forget($key);
         }
-        Cache::forget('books_cache_keys');
+        Cache::forget($trackerKey);
+    }
+
+    /**
+     * Delete the stored file behind a cover_url, only inside the user's own covers directory
+     */
+    private function deleteLocalCover(?string $coverUrl): void
+    {
+        if (!$coverUrl || !str_starts_with($coverUrl, '/storage/')) {
+            return;
+        }
+
+        $path = urldecode(strtok(substr($coverUrl, strlen('/storage/')), '?'));
+        $prefix = 'covers/' . Auth::id() . '/';
+
+        if (str_starts_with($path, $prefix) && !str_contains($path, '..')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     // Display a listing of the resource.
@@ -87,13 +106,14 @@ class BookApiController extends Controller
             'per_page' => $request->input('per_page', 50),
             'page' => $request->input('page', 1),
         ];
-        $cacheKey = 'books_' . md5(json_encode($cacheParams));
+        $cacheKey = 'books_' . Auth::id() . '_' . md5(json_encode($cacheParams));
         
-        // Track cache keys for targeted invalidation
-        $cacheKeys = Cache::get('books_cache_keys', []);
+        // Track cache keys per user for targeted invalidation
+        $trackerKey = 'books_cache_keys:' . Auth::id();
+        $cacheKeys = Cache::get($trackerKey, []);
         if (!in_array($cacheKey, $cacheKeys)) {
             $cacheKeys[] = $cacheKey;
-            Cache::put('books_cache_keys', $cacheKeys, 3600);
+            Cache::put($trackerKey, $cacheKeys, 3600);
         }
         
         // Cache for 5 minutes
@@ -239,18 +259,12 @@ class BookApiController extends Controller
         ]);
 
         try {
-            // Delete old cover if it exists and is a local file
-            if ($book->cover_url && !filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
-                $oldPath = public_path($book->cover_url);
-                if (file_exists($oldPath)) {
-                    unlink($oldPath);
-                }
-            }
+            $this->deleteLocalCover($book->cover_url);
 
             // Store the new cover
             $file = $request->file('cover');
             $filename = 'book_' . $book->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('covers', $filename, 'public');
+            $path = $file->storeAs('covers/' . Auth::id(), $filename, 'public');
             
             // Store relative URL in database (no host/IP) with cache-busting parameter
             $relativePath = '/storage/' . $path . '?v=' . time();
@@ -279,13 +293,7 @@ class BookApiController extends Controller
     public function deleteCover(Book $book)
     {
         try {
-            // Only delete if it's a local file (not an external URL)
-            if ($book->cover_url && !filter_var($book->cover_url, FILTER_VALIDATE_URL)) {
-                $path = public_path($book->cover_url);
-                if (file_exists($path)) {
-                    unlink($path);
-                }
-            }
+            $this->deleteLocalCover($book->cover_url);
             
             // Remove cover URL from database
             $book->cover_url = null;

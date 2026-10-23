@@ -9,6 +9,10 @@ use Maatwebsite\Excel\Concerns\WithValidation;
 
 class BooksImport implements ToModel, WithHeadingRow, WithValidation
 {
+    public function __construct(private int $userId)
+    {
+    }
+
     /**
     * @param array $row
     *
@@ -30,7 +34,7 @@ class BooksImport implements ToModel, WithHeadingRow, WithValidation
             return null;
         }
 
-        return new Book([
+        $book = new Book([
             'title'            => $title,
             'author'           => $author,
             'isbn'             => $row['isbn'] ?? null,
@@ -48,6 +52,9 @@ class BooksImport implements ToModel, WithHeadingRow, WithValidation
             'year_read'        => $row['jaar_gelezen'] ?? $row['year_read'] ?? null,
             'rating'           => $row['beoordeling'] ?? $row['rating'] ?? null,
         ]);
+        $book->user_id = $this->userId;
+
+        return $book;
     }
 
     public function rules(): array

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 class ReadingChallenge extends Model
 {
-    use HasFactory;
+    use BelongsToUser, HasFactory;
 
     protected $fillable = [
         'name',

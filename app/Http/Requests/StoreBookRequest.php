@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBookRequest extends FormRequest
 {
@@ -44,6 +45,7 @@ class StoreBookRequest extends FormRequest
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'year_read' => 'nullable|integer|min:1900|max:2100',
             'rating' => 'nullable|numeric|min:0|max:10',
+            'series_id' => ['nullable', 'integer', Rule::exists('series', 'id')->where('user_id', $this->user()?->id)],
         ];
     }
 }

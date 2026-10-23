@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // This is a token-only API: never redirect unauthenticated requests to a login page
+        $middleware->redirectGuestsTo(fn () => null);
+
         // Enable CORS for all API routes
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
@@ -23,5 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // API clients may omit the Accept header; always answer with JSON (401, not a redirect to a missing login route)
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson()
+        );
     })->create();
