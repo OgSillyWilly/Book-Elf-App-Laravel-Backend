@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Imports\BooksImport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -27,14 +28,14 @@ class BookImportController extends Controller
         ]);
 
         try {
-            Excel::import(new BooksImport, $request->file('file'));
+            Excel::import(new BooksImport(Auth::id()), $request->file('file'));
 
             // Clear books-related cache after import
-            $cacheKeys = Cache::get('books_cache_keys', []);
-            foreach ($cacheKeys as $key) {
+            $trackerKey = 'books_cache_keys:' . Auth::id();
+            foreach (Cache::get($trackerKey, []) as $key) {
                 Cache::forget($key);
             }
-            Cache::forget('books_cache_keys');
+            Cache::forget($trackerKey);
 
             return response()->json([
                 'message' => 'Boeken succesvol geïmporteerd!',

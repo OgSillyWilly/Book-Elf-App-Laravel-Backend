@@ -1,0 +1,83 @@
+# .dockerignore for Laravel
+# Reduce image size and avoid copying unnecessary files
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files (secrets should be in Fly.io secrets)
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+tests/
+phpunit.xml
+.phpunit.result.cache
+coverage/
+
+# Node modules and frontend assets (if you build them separately)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Development files
+README.md
+*.md
+.editorconfig
+.php-cs-fixer.php
+phpstan.neon
+pint.json
+
+# Storage and cache (will be created in container)
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+bootstrap/cache/*
+!storage/framework/.gitignore
+!storage/framework/cache/.gitignore
+!storage/framework/sessions/.gitignore
+!storage/framework/views/.gitignore
+!storage/logs/.gitignore
+!bootstrap/cache/.gitignore
+
+# Database file (will be on mounted volume)
+database/*.sqlite
+database/*.sqlite-*
+
+# Local uploads (will be on mounted volume)
+storage/app/public/covers/*
+!storage/app/public/.gitignore
+
+# Vendor (will be installed in Dockerfile)
+vendor/
+
+# Build artifacts
+public/hot
+public/storage
+public/build
+
+# Deployment files
+.fly
+fly.toml
+Dockerfile
+.dockerignore
+
+# Mobile app
+mobile/
+
+# Scripts (but keep docker-entrypoint.sh)
+*.sh
+!docker-entrypoint.sh

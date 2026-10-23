@@ -41,7 +41,7 @@ class FetchBookCovers extends Command
         $force = $this->option('force');
         $limit = $this->option('limit');
 
-        $query = Book::query();
+        $query = Book::withoutGlobalScopes();
 
         if (!$force) {
             $query->whereNull('cover_url')

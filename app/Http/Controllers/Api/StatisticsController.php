@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Book;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
@@ -12,11 +13,29 @@ use Carbon\Carbon;
 class StatisticsController extends Controller
 {
     /**
+     * Cache a per-user statistic and remember its key so clearCache() can drop it
+     */
+    private function remember(string $key, \Closure $callback)
+    {
+        $userId = Auth::id();
+        $fullKey = "statistics:{$userId}:{$key}";
+        $trackerKey = "statistics_keys:{$userId}";
+
+        $keys = Cache::get($trackerKey, []);
+        if (!in_array($fullKey, $keys)) {
+            $keys[] = $fullKey;
+            Cache::put($trackerKey, $keys, 3600);
+        }
+
+        return Cache::remember($fullKey, 300, $callback);
+    }
+
+    /**
      * Get overall reading statistics
      */
     public function overview()
     {
-        return Cache::remember('statistics:overview', 300, function () {
+        return $this->remember('overview', function () {
             $totalBooks = Book::count();
             $booksRead = Book::where('is_read', true)->count();
             $booksUnread = $totalBooks - $booksRead;
@@ -73,9 +92,7 @@ class StatisticsController extends Controller
             return response()->json(['error' => 'Author parameter is required'], 400);
         }
         
-        $cacheKey = 'statistics:author:' . md5($author);
-        
-        return Cache::remember($cacheKey, 300, function () use ($author) {
+        return $this->remember('author:' . md5($author), function () use ($author) {
             $totalBooks = Book::where('author', 'LIKE', "%{$author}%")->count();
             $booksRead = Book::where('author', 'LIKE', "%{$author}%")
                 ->where('is_read', true)
@@ -117,9 +134,7 @@ class StatisticsController extends Controller
     {
         $year = $request->input('year', date('Y'));
         
-        $cacheKey = "statistics:patterns:{$year}";
-        
-        return Cache::remember($cacheKey, 300, function () use ($year) {
+        return $this->remember("patterns:{$year}", function () use ($year) {
             $monthlyStats = [];
             
             for ($month = 1; $month <= 12; $month++) {
@@ -153,7 +168,7 @@ class StatisticsController extends Controller
      */
     public function byType()
     {
-        return Cache::remember('statistics:by_type', 300, function () {
+        return $this->remember('by_type', function () {
             $stats = Book::where('is_read', true)
                 ->select('type', DB::raw('COUNT(*) as count'))
                 ->groupBy('type')
@@ -175,7 +190,7 @@ class StatisticsController extends Controller
     {
         $limit = min((int)$request->input('limit', 10), 50);
         
-        return Cache::remember("statistics:top_rated:{$limit}", 300, function () use ($limit) {
+        return $this->remember("top_rated:{$limit}", function () use ($limit) {
             return Book::where('is_read', true)
                 ->whereNotNull('rating')
                 ->orderBy('rating', 'desc')
@@ -190,7 +205,7 @@ class StatisticsController extends Controller
      */
     public function yearlyHistory()
     {
-        return Cache::remember('statistics:yearly_history', 300, function () {
+        return $this->remember('yearly_history', function () {
             $history = Book::where('is_read', true)
                 ->whereNotNull('year_read')
                 ->select('year_read', DB::raw('COUNT(*) as count'))
@@ -212,7 +227,7 @@ class StatisticsController extends Controller
      */
     public function seriesProgress()
     {
-        return Cache::remember('statistics:series_progress', 300, function () {
+        return $this->remember('series_progress', function () {
             $series = \App\Models\Series::with('books')->get();
             
             $stats = $series->map(function ($s) {
@@ -241,24 +256,17 @@ class StatisticsController extends Controller
     }
 
     /**
-     * Clear statistics cache
+     * Clear the current user's statistics cache
      */
     public function clearCache()
     {
-        $keys = [
-            'statistics:overview',
-            'statistics:by_type',
-            'statistics:yearly_history',
-            'statistics:series_progress',
-        ];
-        
-        foreach ($keys as $key) {
+        $trackerKey = 'statistics_keys:' . Auth::id();
+
+        foreach (Cache::get($trackerKey, []) as $key) {
             Cache::forget($key);
         }
-        
-        // Clear pattern caches
-        Cache::flush(); // This will clear all cache, but in production you'd want more targeted clearing
-        
+        Cache::forget($trackerKey);
+
         return response()->json(['message' => 'Statistics cache cleared successfully']);
     }
 }
